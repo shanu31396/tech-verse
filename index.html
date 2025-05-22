@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TechVerse - Explore Future Tech</title>
+</head>
+<body>
+
+  <header>
+    <h1>Welcome to TechVerse</h1>
+    <p>Your Gateway to Future & Present Technologies</p>
+    <hr>
+  </header>
+
+  <nav>
+    <ul>
+      <li><a href="#new-tech">New Arrived Technologies</a></li>
+      <li><a href="#advanced-tech">Advanced Technologies Explained</a></li>
+      <li><a href="#premium">Premium Subscription</a></li>
+    </ul>
+    <hr>
+  </nav>
+
+  <section id="new-tech">
+    <h2>🚀 New Arrived Technologies</h2>
+    <ul>
+      <li><strong>Humanoid Robotics:</strong> Advanced robots with human-like behavior and AI-driven emotion detection.</li>
+      <li><strong>Quantum Internet:</strong> Ultra-secure internet using quantum entanglement for data transfer.</li>
+      <li><strong>AI Code Generators:</strong> Tools like GitHub Copilot and GPT-4o revolutionizing software development.</li>
+      <li><strong>Neuromorphic Chips:</strong> Chips designed to mimic the human brain, boosting AI computation speeds.</li>
+    </ul>
+  </section>
+
+  <section id="advanced-tech">
+    <h2>🧠 Existing Advanced Technologies Explained</h2>
+    <h3>1. Artificial Intelligence (AI)</h3>
+    <p>AI refers to machines that can perform tasks which typically require human intelligence, such as vision, speech recognition, and decision-making.</p>
+
+    <h3>2. Blockchain</h3>
+    <p>A decentralized ledger technology used in cryptocurrencies like Bitcoin and Ethereum, but also useful in supply chain, identity verification, and voting systems.</p>
+
+    <h3>3. 5G Technology</h3>
+    <p>5G is the fifth generation of mobile networks, offering high-speed, low-latency internet to support IoT, smart cities, and autonomous vehicles.</p>
+
+    <h3>4. Augmented Reality (AR) & Virtual Reality (VR)</h3>
+    <p>AR overlays digital content in the real world, while VR immerses users in a fully virtual environment. Used in gaming, training, and education.</p>
+  </section>
+  
+  <!-- ====== Premium PDF Editor Section Start ====== -->
+<section id="premium-pdf-editor" style="padding:20px; border:2px solid #0066cc; max-width:700px; margin:20px auto; font-family:sans-serif;">
+  <h2 style="color:#0066cc;">Premium Feature: Advanced PDF Editor</h2>
+  <p>Upload your PDF, add text notes, and download your edited PDF — ₹20 per PDF.</p>
+  
+  <!-- Upload PDF -->
+  <input type="file" id="pdf-upload" accept="application/pdf" />
+  <br /><br />
+  
+  <!-- PDF canvas -->
+  <canvas id="pdf-render" style="border:1px solid #999; max-width:100%;"></canvas>
+  <br /><br />
+  
+  <!-- Text annotation input -->
+  <input type="text" id="text-annotation" placeholder="Type text to add on PDF" style="width:60%; padding:5px;" />
+  <button id="add-text-btn">Add Text</button>
+  <br /><br />
+  
+  <!-- Payment and download -->
+  <button id="pay-btn" disabled style="padding:10px 20px; font-weight:bold; background:#007bff; color:#fff; border:none; cursor:not-allowed;">
+    Pay ₹20 to Download Edited PDF
+  </button>
+  <button id="download-btn" disabled style="padding:10px 20px; font-weight:bold; background:#28a745; color:#fff; border:none; margin-left:10px;">
+    Download PDF
+  </button>
+  
+  <p id="status-msg" style="margin-top:15px; color:#555;"></p>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.7.107/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<script>
+(async () => {
+  const uploadInput = document.getElementById('pdf-upload');
+  const canvas = document.getElementById('pdf-render');
+  const ctx = canvas.getContext('2d');
+  const addTextBtn = document.getElementById('add-text-btn');
+  const textInput = document.getElementById('text-annotation');
+  const payBtn = document.getElementById('pay-btn');
+  const downloadBtn = document.getElementById('download-btn');
+  const statusMsg = document.getElementById('status-msg');
+
+  let pdfDoc = null;
+  let currentPage = 1;
+  let pdfBytes = null;
+  let editedPdfBytes = null;
+  let annotationTexts = [];
+
+  // Load and render PDF with PDF.js
+  uploadInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file || file.type !== 'application/pdf') {
+      alert('Please upload a valid PDF file.');
+      return;
+    }
+    pdfBytes = await file.arrayBuffer();
+
+    pdfDoc = await pdfjsLib.getDocument({data: pdfBytes}).promise;
+    currentPage = 1;
+    annotationTexts = [];
+    statusMsg.textContent = 'PDF loaded. Add text annotations, then pay to download.';
+    payBtn.disabled = false;
+    downloadBtn.disabled = true;
+
+    await renderPage(currentPage);
+  });
+
+  // Render current page
+  async function renderPage(pageNum) {
+    const page = await pdfDoc.getPage(pageNum);
+    const viewport = page.getViewport({scale: 1.5});
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Render PDF page into canvas context
+    const renderContext = {
+      canvasContext: ctx,
+      viewport: viewport,
+    };
+    await page.render(renderContext).promise;
+
+    // Draw annotations on canvas
+    ctx.font = '16px Arial';
+    ctx.fillStyle = 'red';
+    annotationTexts.forEach(({text, x, y}) => {
+      ctx.fillText(text, x, y);
+    });
+  }
+
+  // Add text annotation
+  addTextBtn.addEventListener('click', () => {
+    const text = textInput.value.trim();
+    if (!text) {
+      alert('Please type some text to add.');
+      return;
+    }
+    // For demo, add text at fixed coords (you can improve by allowing user to click)
+    const x = 50 + annotationTexts.length * 10;
+    const y = 100 + annotationTexts.length * 20;
+    annotationTexts.push({text, x, y});
+    textInput.value = '';
+    renderPage(currentPage);
+  });
+
+  // Prepare edited PDF using PDF-lib (add annotations)
+  async function prepareEditedPdf() {
+    const pdfDocLib = await PDFLib.PDFDocument.load(pdfBytes);
+    const pages = pdfDocLib.getPages();
+    const firstPage = pages[0];
+
+    annotationTexts.forEach(({text, x, y}) => {
+      firstPage.drawText(text, {
+        x: x,
+        y: firstPage.getHeight() - y, // PDF-lib y origin is bottom-left
+        size: 16,
+        color: PDFLib.rgb(1, 0, 0),
+      });
+    });
+
+    editedPdfBytes = await pdfDocLib.save();
+  }
+
+  // Razorpay payment integration
+  payBtn.addEventListener('click', async () => {
+    if (!pdfDoc) {
+      alert('Please upload a PDF first.');
+      return;
+    }
+
+    statusMsg.textContent = 'Preparing your edited PDF...';
+    await prepareEditedPdf();
+
+    // Create Razorpay options
+    const options = {
+      key: 'rzp_test_YourTestKeyHere', // Replace with your Razorpay Test Key ########   TO REPLACE    #############
+      amount: 2000, // ₹20.00 in paise
+      currency: 'INR',
+      name: 'Premium PDF Editor',
+      description: 'Pay ₹20 to download your edited PDF',
+      handler: function (response) {
+        statusMsg.textContent = 'Payment successful! Download unlocked.';
+        payBtn.disabled = true;
+        downloadBtn.disabled = false;
+      },
+      modal: {
+        ondismiss: function () {
+          statusMsg.textContent = 'Payment cancelled.';
+        }
+      }
+    };
+
+    const rzp = new Razorpay(options);
+    rzp.open();
+  });
+
+  // Download edited PDF
+  downloadBtn.addEventListener('click', () => {
+    if (!editedPdfBytes) {
+      alert('No edited PDF available. Please pay first.');
+      return;
+    }
+    const blob = new Blob([editedPdfBytes], {type: 'application/pdf'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'edited-document.pdf';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+})();
+</script>
+
+  
+
+  <footer>
+    <hr>
+    <p>&copy; 2025 TechVerse. All rights reserved.</p>
+    <p>Contact: support@techverse.com</p>
+  </footer>
+
+</body>
+</html>
